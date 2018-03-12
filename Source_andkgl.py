@@ -19,6 +19,41 @@ def onmouse(event, x, y, flags, param):
         print(x, y)
 
 
+def getTransform(windowName, image):
+    # Click on points to follow
+    cv2.namedWindow(windowName, cv2.WINDOW_NORMAL)
+    cv2.setMouseCallback(windowName, onmouse)
+    cv2.imshow(windowName, image)
+    cv2.waitKey(200)
+
+    global clicked
+    global mouseX
+    global mouseY
+
+    counter = 0
+    numberOfPoints = 4
+    pts_src = np.empty(shape=[0, 2], dtype=np.int32)
+    while counter < numberOfPoints:
+        cv2.waitKey(100)
+        if clicked:
+            pts_src = np.append(pts_src, [[mouseX, mouseY]], axis=0)
+            clicked = False
+            counter += 1
+
+    edge = 100
+    shape = image.shape
+    x = shape[1]
+    y = shape[0]
+    pts_dst = np.array(
+        [[0 + edge, 0 + edge], [x - edge, 0 + edge], [x - edge, y - edge], [0 + edge, y - edge]])
+
+    h, status = cv2.findHomography(pts_src, pts_dst)
+
+    size = (x, y)
+
+    return h, size
+
+
 # Plot graph of grayscale value under marked points
 if False:
     cap = cv2.VideoCapture('D:/Dropbox/SDU/8_Semester/RMURV2/Videos/brakeCarVid.mp4')
@@ -452,71 +487,33 @@ if False:
     cv2.destroyAllWindows()
     cap.release()
 
-# Subtract background. Good vals: KernelSize:  3 .   Blur:  5 .   It0:  2 .   It1:  13 .   It2:  0
+# Subtract background on perspective
+# KernelSize:  3 .   Blur:  3 .   It0:  2 .   It1:  43 .   It2:  18.,
 if True:
     cap = cv2.VideoCapture('D:/Dropbox/SDU/8_Semester/RMURV2/Videos/video3.mp4')
 
-    ret, old_frame = cap.read()
+    ret, image = cap.read()
+    h, size = getTransform('frame', image)
 
-    # Click on points to follow
-    cv2.namedWindow('frame', cv2.WINDOW_NORMAL)
-    cv2.setMouseCallback('frame', onmouse)
-    cv2.imshow('frame', old_frame)
-    cv2.waitKey(200)
+    blur = 3
+    kernelSize = 3
+    it0 = 2
+    it1 = 40
+    it2 = 18
 
-    counter = 0
-    numberOfPoints = 4
-    pts_src = np.empty(shape=[0, 2], dtype=np.int32)
-    while counter < numberOfPoints:
-        cv2.waitKey(100)
-        if clicked:
-            pts_src = np.append(pts_src, [[mouseX, mouseY]], axis=0)
-            clicked = False
-            counter += 1
-
-    # pts_dst = np.array([[0, 0], [0, 500], [500, 500], [500, 0]])
-    x_orig = pts_src[0][0]
-    y_orig = pts_src[0][1]
-
-    # pts_dst = np.array([[0, 0], [pts_src[1][0] - x_orig, pts_src[1][1] - y_orig], [pts_src[2][0] - x_orig, pts_src[2][1] - y_orig], [pts_src[3][0] - x_orig, pts_src[3][1] - y_orig]])
-    edge = 100
-    shape = old_frame.shape
-    x = shape[1]
-    y = shape[0]
-    pts_dst = np.array(
-        [[0 + edge, 0 + edge], [x - edge, 0 + edge], [x - edge, y - edge], [0 + edge, y - edge]])
-
-    pMouse = np.empty(shape=[0, 1, 2], dtype=np.float32)
-
-    h, status = cv2.findHomography(pts_src, pts_dst)
-
-    size = (x, y)
-
-    old_frame = cv2.warpPerspective(old_frame, h, size)
-    old_gray = cv2.cvtColor(old_frame, cv2.COLOR_BGR2GRAY)
-
-    cv2.imshow('frame', old_gray)
-    clicked = False
-
-    fgbg = cv2.createBackgroundSubtractorMOG2(5, 16, False)
-    blur = 1
-    kernelSize = 1
-    it0 = 0
-    it1 = 0
-    it2 = 0
+    fgbg = cv2.createBackgroundSubtractorMOG2(50, 16, False)
     while True:
-
         ret, frame = cap.read()
-
-        #cv2.imshow('frame', frame)
-        #cv2.waitKey(50)
-        #cv2.waitKey()
 
         frame = cv2.blur(frame, (blur, blur))
 
         frame = cv2.warpPerspective(frame, h, size)
 
         fgmask = fgbg.apply(frame)
+
+        #cv2.imshow('frame', fgmask)
+        #cv2.waitKey(50)
+        #cv2.waitKey()
 
         kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (kernelSize, kernelSize))
         fgmask = cv2.erode(fgmask, kernel, iterations=it0)
@@ -525,7 +522,7 @@ if True:
 
         fgmask = cv2.cvtColor(fgmask, cv2.COLOR_GRAY2BGR)
 
-        fgmask = cv2.addWeighted(frame, 0.5, fgmask, 0.5, 1.0)
+        fgmask = cv2.addWeighted(frame, 0.5, fgmask, 0.5, 0.0)
 
         cv2.imshow('frame', fgmask)
         k = cv2.waitKey(10) & 0xff
@@ -556,10 +553,7 @@ if True:
             it2 = it2 - 1
 
         if changed:
-            print(k)
             print('KernelSize: ', kernelSize, '.   Blur: ', blur, '.   It0: ', it0, '.   It1: ', it1, '.   It2: ', it2)
-        #cv2.waitKey(100)
-        #cv2.waitKey()
 
     cap.release()
     cv2.destroyAllWindows()
