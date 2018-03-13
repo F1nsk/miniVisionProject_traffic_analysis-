@@ -19,6 +19,41 @@ def onmouse(event, x, y, flags, param):
         print(x, y)
 
 
+def getTransform(windowName, image):
+    # Click on points to follow
+    cv2.namedWindow(windowName, cv2.WINDOW_NORMAL)
+    cv2.setMouseCallback(windowName, onmouse)
+    cv2.imshow(windowName, image)
+    cv2.waitKey(200)
+
+    global clicked
+    global mouseX
+    global mouseY
+
+    counter = 0
+    numberOfPoints = 4
+    pts_src = np.empty(shape=[0, 2], dtype=np.int32)
+    while counter < numberOfPoints:
+        cv2.waitKey(100)
+        if clicked:
+            pts_src = np.append(pts_src, [[mouseX, mouseY]], axis=0)
+            clicked = False
+            counter += 1
+
+    edge = 100
+    shape = image.shape
+    x = shape[1]
+    y = shape[0]
+    pts_dst = np.array(
+        [[0 + edge, 0 + edge], [x - edge, 0 + edge], [x - edge, y - edge], [0 + edge, y - edge]])
+
+    h, status = cv2.findHomography(pts_src, pts_dst)
+
+    size = (x, y)
+
+    return h, size
+
+
 # Plot graph of grayscale value under marked points
 if False:
     cap = cv2.VideoCapture('D:/Dropbox/SDU/8_Semester/RMURV2/Videos/brakeCarVid.mp4')
@@ -109,35 +144,67 @@ if False:
 
     show(plot)
 
-# Subtract background
-if True:
+# Subtract background. Good vals: KernelSize:  3 .   Blur:  5 .   It0:  2 .   It1:  13 .   It2:  0
+if False:
     cap = cv2.VideoCapture('D:/Dropbox/SDU/8_Semester/RMURV2/Videos/video3.mp4')
-    fgbg = cv2.createBackgroundSubtractorMOG2(50, 16, False)
+    fgbg = cv2.createBackgroundSubtractorMOG2(5, 16, False)
+    blur = 1
+    kernelSize = 1
+    it0 = 0
+    it1 = 0
+    it2 = 0
     while True:
 
         ret, frame = cap.read()
 
         #cv2.imshow('frame', frame)
-        cv2.waitKey(500)
+        #cv2.waitKey(50)
         #cv2.waitKey()
 
-        frame = cv2.blur(frame, (5, 5))
+        frame = cv2.blur(frame, (blur, blur))
 
         fgmask = fgbg.apply(frame)
 
-        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
-        fgmask = cv2.erode(fgmask, kernel, iterations=0)
-        fgmask = cv2.dilate(fgmask, kernel, iterations=1)
-        fgmask = cv2.erode(fgmask, kernel, iterations=4)
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (kernelSize, kernelSize))
+        fgmask = cv2.erode(fgmask, kernel, iterations=it0)
+        fgmask = cv2.dilate(fgmask, kernel, iterations=it1)
+        fgmask = cv2.erode(fgmask, kernel, iterations=it2)
 
         fgmask = cv2.cvtColor(fgmask, cv2.COLOR_GRAY2BGR)
 
         fgmask = cv2.addWeighted(frame, 0.5, fgmask, 0.5, 1.0)
 
         cv2.imshow('frame', fgmask)
-        k = cv2.waitKey(1) & 0xff
+        k = cv2.waitKey(100) & 0xff
+        changed = False
         if k == 27:
             break
+        if k != 255:
+            changed = True
+        if k == 112:
+            blur = blur + 2
+        if k == 111 and blur >= 3:
+            blur = blur - 2
+        if k == 230:
+            kernelSize = kernelSize + 2
+        if k == 108 and kernelSize >= 3:
+            kernelSize = kernelSize - 2
+        if k == 44:
+            it0 = it0 + 1
+        if k == 109 and it0 > 0:
+            it0 = it0 - 1
+        if k == 105:
+            it1 = it1 + 1
+        if k == 117 and it1 > 0:
+            it1 = it1 - 1
+        if k == 107:
+            it2 = it2 + 1
+        if k == 106 and it2 > 0:
+            it2 = it2 - 1
+
+        if changed:
+            print(k)
+            print('KernelSize: ', kernelSize, '.   Blur: ', blur, '.   It0: ', it0, '.   It1: ', it1, '.   It2: ', it2)
         #cv2.waitKey(100)
         #cv2.waitKey()
 
@@ -419,3 +486,74 @@ if False:
         p0 = good_new.reshape(-1, 1, 2)
     cv2.destroyAllWindows()
     cap.release()
+
+# Subtract background on perspective
+# KernelSize:  3 .   Blur:  3 .   It0:  2 .   It1:  43 .   It2:  18.,
+if True:
+    cap = cv2.VideoCapture('D:/Dropbox/SDU/8_Semester/RMURV2/Videos/video3.mp4')
+
+    ret, image = cap.read()
+    h, size = getTransform('frame', image)
+
+    blur = 3
+    kernelSize = 3
+    it0 = 2
+    it1 = 40
+    it2 = 18
+
+    fgbg = cv2.createBackgroundSubtractorMOG2(50, 16, False)
+    while True:
+        ret, frame = cap.read()
+
+        frame = cv2.blur(frame, (blur, blur))
+
+        frame = cv2.warpPerspective(frame, h, size)
+
+        fgmask = fgbg.apply(frame)
+
+        #cv2.imshow('frame', fgmask)
+        #cv2.waitKey(50)
+        #cv2.waitKey()
+
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (kernelSize, kernelSize))
+        fgmask = cv2.erode(fgmask, kernel, iterations=it0)
+        fgmask = cv2.dilate(fgmask, kernel, iterations=it1)
+        fgmask = cv2.erode(fgmask, kernel, iterations=it2)
+
+        fgmask = cv2.cvtColor(fgmask, cv2.COLOR_GRAY2BGR)
+
+        fgmask = cv2.addWeighted(frame, 0.5, fgmask, 0.5, 0.0)
+
+        cv2.imshow('frame', fgmask)
+        k = cv2.waitKey(10) & 0xff
+        changed = False
+        if k == 27:
+            break
+        if k != 255:
+            changed = True
+        if k == 112:
+            blur = blur + 2
+        if k == 111 and blur >= 3:
+            blur = blur - 2
+        if k == 230:
+            kernelSize = kernelSize + 2
+        if k == 108 and kernelSize >= 3:
+            kernelSize = kernelSize - 2
+        if k == 44:
+            it0 = it0 + 1
+        if k == 109 and it0 > 0:
+            it0 = it0 - 1
+        if k == 105:
+            it1 = it1 + 1
+        if k == 117 and it1 > 0:
+            it1 = it1 - 1
+        if k == 107:
+            it2 = it2 + 1
+        if k == 106 and it2 > 0:
+            it2 = it2 - 1
+
+        if changed:
+            print('KernelSize: ', kernelSize, '.   Blur: ', blur, '.   It0: ', it0, '.   It1: ', it1, '.   It2: ', it2)
+
+    cap.release()
+    cv2.destroyAllWindows()
