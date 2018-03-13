@@ -245,7 +245,7 @@ class VideoTracker:
 
             has_completed_one_cycle = True
 
-<<<<<<< HEAD
+#<<<<<<< HEAD
     # Create and return a tracker
     def create_tracker(self, tracker_nr, point, frame):
         tracker_types = ['BOOSTING', 'MIL', 'KCF', 'TLD', 'MEDIANFLOW', 'GOTURN']
@@ -344,7 +344,7 @@ class VideoTracker:
 
             # Display FPS on frame
             cv2.putText(self.currentFrame, "FPS : " + str(int(fps)), (100, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (50, 170, 50), 2)
-=======
+#=======
 
     def opticalFlowTracking(self, pointArray2Track):
         #### Optical flow defines ###
@@ -381,4 +381,4 @@ class VideoTracker:
             if k == 27:
                 break
 
->>>>>>> optimalFlow
+#>>>>>>> optimalFlow
