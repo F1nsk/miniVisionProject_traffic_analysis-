@@ -18,7 +18,7 @@ class VideoTracker:
         self.it0 = 3
         self.it1 = 25
         self.it2 = 0
-        self.coord2Track
+
 
 
         self.newFrameReady = False
@@ -206,7 +206,7 @@ class VideoTracker:
     # Use blob detection on an image and display the found blobs on another image.
     def draw_blob_detection(self, window_name, detect_image, display_image, connectivity=4):
 
-        num_labels, labels, stats, centroids = self.blob_dection(detect_image, connectivity)
+        num_labels, labels, stats, centroids = self.blob_detection(detect_image, connectivity)
 
         # Draw circles where blobs where found
         for i, val in enumerate(centroids):
@@ -352,6 +352,7 @@ class VideoTracker:
                               maxLevel=2,
                               criteria=(cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.03))
         p0 = pointArray2Track
+        print("tracking", pointArray2Track)
         while(True):
             ret, frame = self.video.read()
             ret, old_frame = self.video.read()
