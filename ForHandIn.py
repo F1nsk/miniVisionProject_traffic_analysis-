@@ -62,6 +62,13 @@ class VideoTrackerFinal:
 
         fgmask = cv2.cvtColor(fgmask, cv2.COLOR_GRAY2BGR)
 
+        # cv2.imwrite('Background.png', fgmask)
+        # cv2.waitKey(10)
+        #
+        # display_image = cv2.addWeighted(frame, 0.5, fgmask, 0.5, 0.0)
+        # cv2.imwrite('Background2.png', display_image)
+        # cv2.waitKey(10)
+
         return use_frame, fgmask
 
     # Get info from blob detection
@@ -107,12 +114,23 @@ class VideoTrackerFinal:
     def find_new_trackpoints(self, background):
         num_labels, labels, stats, centroids = self.blob_detection(background, 8)
 
+        ret, display_image = self.video.read()
+
+        for i, val in enumerate(centroids):
+            if stats[i, cv2.CC_STAT_AREA] > 50:
+                cv2.circle(display_image, (int(centroids[i][0]), int(centroids[i][1])), 3, (255, 0, 0), 3, 8, 0)
+
+        # cv2.imwrite('Blobs.png', display_image)
+        # cv2.waitKey(500)
+        # print("NOW!")
+        # cv2.waitKey(500)
+
         new_points_to_track = []
         counter = 0
 
         for point in centroids:
             if not self.is_point_being_tracked(point, 50):
-                if stats[counter, cv2.CC_STAT_AREA] > 100:
+                if stats[counter, cv2.CC_STAT_AREA] > 50:
                     bbox = self.create_bbox_with_stats(stats, counter)
                     new_points_to_track.append(bbox)
             counter = counter + 1
@@ -268,6 +286,7 @@ class VideoTrackerFinal:
 
             # mask = cv2.line(mask, (a, b), (c, d), (0, 255, 0), 2)
             frame = cv2.circle(frame, (a, b), 5, (255, 0, 0), -1)
+
             self.trackedPoints.append((a, b))
 
             if len(kalman_array) > 0:

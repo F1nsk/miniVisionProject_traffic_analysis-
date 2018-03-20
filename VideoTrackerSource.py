@@ -51,7 +51,7 @@ pts_dst = np.array([new_p1, new_p2, new_p3, new_p4])
 vt.make_predefined_transformation(pts_src, pts_dst, (1000, 1000))
 
 vt.create_background_subtractor(100, 50)
-vt.run_optical_flow_with_kalman('Display', True)
+vt.run_optical_flow_with_kalman('Display', False)
 """
 """
 
