@@ -42,15 +42,9 @@ class VideoTrackerFinal:
     def make_predefined_transformation(self, src, dst, size):
         self.video.set(cv2.CAP_PROP_POS_FRAMES, 0)
         ret, image = self.video.read()
-        
-        cv2.imwrite('Before.png', image)
 
         self.h, status = cv2.findHomography(src, dst)
         self.size = size
-
-        im_out = cv2.warpPerspective(image, self.h, size)
-        im_out = self.rotateImage(im_out, -90)
-        cv2.imwrite('After.png', im_out)
 
     def create_background_subtractor(self, frames, threshold):
         self.backgroundSubtractor = cv2.createBackgroundSubtractorMOG2(frames, threshold, True)
