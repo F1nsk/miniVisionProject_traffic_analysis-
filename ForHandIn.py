@@ -62,12 +62,12 @@ class VideoTrackerFinal:
 
         fgmask = cv2.cvtColor(fgmask, cv2.COLOR_GRAY2BGR)
 
-        # cv2.imwrite('Background.png', fgmask)
-        # cv2.waitKey(10)
-        #
-        # display_image = cv2.addWeighted(frame, 0.5, fgmask, 0.5, 0.0)
-        # cv2.imwrite('Background2.png', display_image)
-        # cv2.waitKey(10)
+        cv2.imwrite('Background.png', fgmask)
+        cv2.waitKey(10)
+
+        display_image = cv2.addWeighted(frame, 0.5, fgmask, 0.5, 0.0)
+        cv2.imwrite('Background2.png', display_image)
+        cv2.waitKey(10)
 
         return use_frame, fgmask
 
@@ -120,10 +120,8 @@ class VideoTrackerFinal:
             if stats[i, cv2.CC_STAT_AREA] > 50:
                 cv2.circle(display_image, (int(centroids[i][0]), int(centroids[i][1])), 3, (255, 0, 0), 3, 8, 0)
 
-        # cv2.imwrite('Blobs.png', display_image)
-        # cv2.waitKey(500)
-        # print("NOW!")
-        # cv2.waitKey(500)
+        cv2.imwrite('Blobs.png', display_image)
+        cv2.waitKey(10)
 
         new_points_to_track = []
         counter = 0
@@ -197,6 +195,9 @@ class VideoTrackerFinal:
 
             ret, frame = self.video.read()
 
+            cv2.imwrite('Orig.png', frame)
+            cv2.waitKey(10)
+
             throw_away_frame, background = self.subtract_background(frame)
 
             if use_transformation:
@@ -245,6 +246,11 @@ class VideoTrackerFinal:
 
             # Display result
             cv2.imshow(window_name, frame)
+
+            # cv2.imwrite('Kalman.png', frame)
+            # cv2.waitKey(500)
+            # print("NOW!")
+            # cv2.waitKey(500)
 
             # Exit if ESC pressed
             k = cv2.waitKey(1) & 0xff
