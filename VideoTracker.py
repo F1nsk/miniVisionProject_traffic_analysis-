@@ -220,6 +220,7 @@ class VideoTracker:
         num_labels, labels, stats, centroids = self.blob_detection(detect_image, connectivity)
 
         # Draw circles where blobs where found
+
         for i, val in enumerate(centroids):
             if stats[i, cv2.CC_STAT_AREA] > minimum_size:
                 cv2.circle(display_image, (int(centroids[i][0]), int(centroids[i][1])), 10, (255, 0, 0), 3, 8, 0)

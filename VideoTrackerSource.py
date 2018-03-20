@@ -1,4 +1,5 @@
 from VideoTracker import VideoTracker
+from ForHandIn import VideoTrackerFinal
 from threading import Thread
 import numpy as np
 import math
@@ -10,6 +11,13 @@ def get_dist(p1, p2):
     return dist
 
 vt = VideoTracker(video_path='D:/Dropbox/SDU/8_Semester/RMURV2/Videos/video3.mp4')
+
+vt.display_trackbars('Trackbars')
+vt.create_background_subtractor(10, 10)
+vt.run_background_and_blobs('Display', 'Blobs')
+
+"""
+vt = VideoTrackerFinal(video_path='D:/Dropbox/SDU/8_Semester/RMURV2/Videos/video3.mp4')
 
 pts_src = np.array([[476, 630], [821, 66], [1121, 237], [1050, 473]])
 
@@ -30,8 +38,6 @@ vt.make_predefined_transformation(pts_src, pts_dst, (900, 720))
 vt.create_background_subtractor(100, 50)
 vt.run_optical_flow_with_kalman('Display', True)
 
-
-# 540
-
+"""
 
 
