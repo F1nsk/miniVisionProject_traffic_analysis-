@@ -10,9 +10,10 @@ import sys
 class VideoTrackerFinal:
     """Class with different functions for tracking objects in videos"""
 
-    def __init__(self, video_path):
+    def __init__(self, video_path, fps):
         self.videoPath = video_path
         self.video = cv2.VideoCapture(video_path)
+        self.fps = fps
 
         self.clicked = False
         self.blur = 9
@@ -41,12 +42,15 @@ class VideoTrackerFinal:
     def make_predefined_transformation(self, src, dst, size):
         self.video.set(cv2.CAP_PROP_POS_FRAMES, 0)
         ret, image = self.video.read()
+        
+        cv2.imwrite('Before.png', image)
 
         self.h, status = cv2.findHomography(src, dst)
         self.size = size
 
-    def nothing(x, y):
-        pass
+        im_out = cv2.warpPerspective(image, self.h, size)
+        im_out = self.rotateImage(im_out, -90)
+        cv2.imwrite('After.png', im_out)
 
     def create_background_subtractor(self, frames, threshold):
         self.backgroundSubtractor = cv2.createBackgroundSubtractorMOG2(frames, threshold, True)
@@ -63,6 +67,7 @@ class VideoTrackerFinal:
         fgmask = cv2.erode(fgmask, kernel, iterations=self.it2)
 
         fgmask = cv2.cvtColor(fgmask, cv2.COLOR_GRAY2BGR)
+
         return use_frame, fgmask
 
     # Get info from blob detection
@@ -131,32 +136,33 @@ class VideoTrackerFinal:
         return bbox
 
     def init_kalman(self):
-        deltaT = 1.
+        deltaT = 1/self.fps
+        print(deltaT)
 
         F = np.matrix([[1, 0, deltaT, 0], [0, 1, 0, deltaT], [0, 0, 1, 0], [0, 0, 0, 1]])
         B = np.matrix([[deltaT ** 2 / 2, 0], [0, deltaT ** 2 / 2], [deltaT, 0], [0, deltaT]])
         H = np.matrix([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]])
 
         model_noise = 1
-        measurement_noise = 100
+        measurement_noise = 0.1
 
         R = measurement_noise ** 2 * np.matlib.identity(4) / deltaT
         Q = model_noise ** 2 * np.matlib.identity(4) * deltaT
 
-        init_mu = np.matrix([[0., 0], [0., 0]])  # This is the acceleration estimate
+        init_mu = np.matrix([[0.], [0.]])  # This is the acceleration estimate
         init_P = np.matlib.identity(4)
 
         init_x = np.matrix([[0], [0], [0], [0]])
         new_kalman = Kalman(F, B, Q, H, R, init_x, init_mu, init_P, deltaT)
 
-        return new_kalman, F, B, Q, H, R, init_x, init_mu, init_P, deltaT
+        return new_kalman, F, B, Q, H, R, init_mu, init_P, deltaT
 
     def run_optical_flow_with_kalman(self, window_name, use_transformation=False):
         cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
         cv2.setMouseCallback(window_name, self.on_mouse)
 
         # Init kalman filter params
-        new_kalman, F, B, Q, H, R, init_x, init_mu, init_P, deltaT = self.init_kalman()
+        new_kalman, F, B, Q, H, R, init_mu, init_P, deltaT = self.init_kalman()
         kalman_array = [new_kalman]
 
         # Create a mask image for drawing purposes
@@ -170,6 +176,7 @@ class VideoTrackerFinal:
         mask = np.zeros_like(old_frame)
 
         has_completed_one_cycle = False
+
         while True:
             # Start timer
             timer = cv2.getTickCount()
@@ -215,7 +222,7 @@ class VideoTrackerFinal:
                                                                         kalman_array)
 
             # Draw kalman
-            self.draw_kalman_speed(frame, kalman_array, 2.4, 40)
+            self.draw_kalman_speed(frame, kalman_array, 40)
 
             # Calculate Frames per second (FPS)
             fps = cv2.getTickFrequency() / (cv2.getTickCount() - timer)
@@ -270,7 +277,7 @@ class VideoTrackerFinal:
             self.trackedPoints.append((a, b))
 
             if len(kalman_array) > 0:
-                next_x = np.matrix([[a], [b], [moved_distance], [moved_distance]])
+                next_x = np.matrix([[a], [b], [a - c], [b - d]])
                 kalman_array[i - points_removed].run_one_step(next_x)
 
         # Now update the previous frame and previous points
@@ -278,7 +285,7 @@ class VideoTrackerFinal:
 
         return old_frame, kalman_array
 
-    def draw_kalman_speed(self, frame, kalman_array, seconds, min_iterations):
+    def draw_kalman_speed(self, frame, kalman_array, min_iterations):
         for kalman in kalman_array:
             if kalman.get_number_of_iterations() > min_iterations:
                 next_x = kalman.get_nextX()
@@ -286,7 +293,13 @@ class VideoTrackerFinal:
                 pos_y = int(round(next_x[1, 0]))
                 speed_x = next_x[2, 0]
                 speed_y = next_x[3, 0]
-                speed = math.sqrt(speed_x ** 2 + speed_y ** 2) * seconds * 1440 * 0.0059
+
+                # 744 pixels on 157.5 meters
+
+                seconds_pr_hour = 3600  # 60 * 60
+                meters_pr_pixel = 0.0002115  # 157.5 / 744
+
+                speed = math.sqrt(speed_x**2 + speed_y**2) * self.fps * seconds_pr_hour * meters_pr_pixel
                 speed = "%.2f" % speed
                 frame = cv2.circle(frame, (pos_x, pos_y), 5, (0, 255, 0), -1)
                 frame = cv2.putText(frame, str(speed), (pos_x, pos_y), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255),

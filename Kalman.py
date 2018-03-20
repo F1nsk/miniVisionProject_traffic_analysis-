@@ -24,7 +24,7 @@ class Kalman:
         self.deltaT = deltaT
 
         self.observations = np.array([0])
-        self.predictions = np.array([[0, 0]])
+        self.predictions = np.array([[0]])
 
         self.iterations = 0
 
@@ -41,6 +41,9 @@ class Kalman:
         self.nextX = self.prevX + self.K * (measurement - self.H * self.prevX)
 
         temp = np.array(self.nextX)
+
+        #print(self.predictions)
+        #print(temp)
         self.predictions = np.vstack((self.predictions, temp))
 
 
